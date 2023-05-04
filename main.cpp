@@ -1,8 +1,13 @@
 #include "AST.h"
+// #include "function.cpp"
+#include "koopa.h"
 #include <cassert>
 #include <cstdio>
+#include <fstream>
 #include <iostream>
 #include <memory>
+#include <sstream>
+#include <stdio.h>
 #include <string>
 using namespace std;
 
@@ -13,7 +18,7 @@ using namespace std;
 // 看起来会很烦人, 于是干脆采用这种看起来 dirty 但实际很有效的手段
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
-
+void parse_AST(const char *);
 int main(int argc, const char *argv[]) {
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
   // compiler 模式 输入文件 -o 输出文件
@@ -30,9 +35,80 @@ int main(int argc, const char *argv[]) {
   unique_ptr<BaseAST> ast;
   auto ret = yyparse(ast);
   assert(!ret);
-
-  // 输出解析得到的 AST, 其实就是个字符串
+  if (mode[1] == 'k') {
+    freopen(output, "w", stdout);
+    // 输出解析得到的 AST, 其实就是个字符串
+    ast->Dump();
+    cout << endl;
+    return 0;
+  }
+  // 将输出打印到所指定的文件中
+  char nameOfOutputFile[20] = "compiler-output.txt";
+  freopen(nameOfOutputFile, "w", stdout);
   ast->Dump();
-  cout << endl;
+
+  ifstream infile(nameOfOutputFile);
+  char *buffers = nullptr;
+  if (infile) {
+    infile.seekg(0, infile.end);
+    int length = infile.tellg();
+    infile.seekg(0, infile.beg);
+    buffers = new char[length];
+    infile.read(buffers, length);
+  } else {
+    cout << "Failed to open file:" << output << endl;
+  }
+  freopen(output, "w", stdout);
+  parse_AST(buffers);
+  delete[] buffers;
+
   return 0;
+}
+
+void parse_AST(const char *str) {
+  // 解析字符串 str, 得到 Koopa IR 程序
+  koopa_program_t program;
+  koopa_error_code_t ret = koopa_parse_from_string(str, &program);
+  assert(ret == KOOPA_EC_SUCCESS); // 确保解析时没有出错
+  // 创建一个 raw program builder, 用来构建 raw program
+  koopa_raw_program_builder_t builder = koopa_new_raw_program_builder();
+  // 将 Koopa IR 程序转换为 raw program
+  koopa_raw_program_t raw = koopa_build_raw_program(builder, program);
+
+  cout << "  .text\n";
+
+  for (size_t i = 0; i < raw.funcs.len; ++i) {
+    // 正常情况下, 列表中的元素就是函数, 我们只不过是在确认这个事实
+    // 当然, 你也可以基于 raw slice 的 kind, 实现一个通用的处理函数
+    assert(raw.funcs.kind == KOOPA_RSIK_FUNCTION);
+    // 获取当前函数
+    koopa_raw_function_t func = (koopa_raw_function_t)raw.funcs.buffer[i];
+
+    cout << "  .globl " << func->name + 1 << endl;
+    cout << func->name + 1 << endl;
+    for (size_t j = 0; j < func->bbs.len; ++j) {
+      // 说明 func->bbs是一个basic_block
+      assert(func->bbs.kind == KOOPA_RSIK_BASIC_BLOCK);
+      koopa_raw_basic_block_t bb = (koopa_raw_basic_block_t)func->bbs.buffer[j];
+      for (size_t k = 0; k < bb->insts.len; k++) {
+        koopa_raw_value_t value = (koopa_raw_value_t)bb->insts.buffer[k];
+        assert(value->kind.tag == KOOPA_RVT_RETURN);
+        koopa_raw_value_t ret_value = value->kind.data.ret.value;
+        int32_t int_val = ret_value->kind.data.integer.value;
+        // assert(int_val == 0);
+        std::cout << "  li a0," << int_val << std::endl;
+        std::cout << "  ret";
+      }
+    }
+  }
+  // 释放 Koopa IR 程序占用的内存
+  koopa_delete_program(program);
+
+  // 处理 raw program
+  // ...
+
+  // 处理完成, 释放 raw program builder 占用的内存
+  // 注意, raw program 中所有的指针指向的内存均为 raw program builder 的内存
+  // 所以不要在 raw program 处理完毕之前释放 builder
+  koopa_delete_raw_program_builder(builder);
 }
