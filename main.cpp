@@ -20,13 +20,20 @@ extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
 void parse_AST(const char *);
 int main(int argc, const char *argv[]) {
+  // 这段代码没看懂，记得搜
+  // TODO()!!!
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+  cout.tie(nullptr);
+
   // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:
   // compiler 模式 输入文件 -o 输出文件
   assert(argc == 5);
   auto mode = argv[1];
   auto input = argv[2];
   auto output = argv[4];
-
+  string inputString = input;
+  string outputString = output;
   // 打开输入文件, 并且指定 lexer 在解析的时候读取这个文件
   yyin = fopen(input, "r");
   assert(yyin);
@@ -36,18 +43,44 @@ int main(int argc, const char *argv[]) {
   auto ret = yyparse(ast);
   assert(!ret);
   if (mode[1] == 'k') {
-    freopen(output, "w", stdout);
-    // 输出解析得到的 AST, 其实就是个字符串
-    ast->Dump();
-    cout << endl;
+    ofstream ofs(outputString);
+    if (ofs.is_open()) {
+      // 此时应该把标准输出流重定向至 ofs,并保留好标准输出流副本cout_buf
+      streambuf *cout_buf = cout.rdbuf();
+      cout.rdbuf(ofs.rdbuf());
+      ast->Dump();
+      cout << endl;
+
+      // 将标准输出流恢复先
+      cout.rdbuf(cout_buf);
+      ofs.close();
+    } else {
+      cerr << "Error: Failed to open file " << outputString << endl;
+    }
     return 0;
   }
   // 将输出打印到所指定的文件中
-  char nameOfOutputFile[20] = "compiler-output.txt";
-  freopen(nameOfOutputFile, "w", stdout);
-  ast->Dump();
+  // freopen("compiler-output.txt", "w", stdout);
+  // ast->Dump();
+  // freopen("/dev/tty", "w", stdout);
+  string middleResult = "AST.txt";
+  ofstream ofs(middleResult);
+  if (ofs.is_open()) {
+    // 流程如上所述
+    streambuf *cout_buf = cout.rdbuf();
+    cout.rdbuf(ofs.rdbuf());
+    ast->Dump();
+    cout << endl;
 
-  ifstream infile(nameOfOutputFile);
+    // 将标准输出流恢复先
+    cout.rdbuf(cout_buf);
+    ofs.close();
+  } else {
+    cerr << "Error: Failed to open file " << outputString << endl;
+  }
+  // 然后恢复stdout
+
+  ifstream infile(middleResult);
   char *buffers = nullptr;
   if (infile) {
     infile.seekg(0, infile.end);
@@ -75,7 +108,7 @@ void parse_AST(const char *str) {
   // 将 Koopa IR 程序转换为 raw program
   koopa_raw_program_t raw = koopa_build_raw_program(builder, program);
 
-  cout << "  .text\n";
+  std::cout << "  .text\n";
 
   for (size_t i = 0; i < raw.funcs.len; ++i) {
     // 正常情况下, 列表中的元素就是函数, 我们只不过是在确认这个事实
