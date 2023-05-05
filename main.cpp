@@ -2,9 +2,11 @@
 // #include "function.cpp"
 #include "koopa.h"
 #include <cassert>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <memory>
 #include <sstream>
 #include <stdio.h>
@@ -18,11 +20,13 @@ using namespace std;
 // 看起来会很烦人, 于是干脆采用这种看起来 dirty 但实际很有效的手段
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
-void parse_AST(const char *);
+void parse_AST_New(char *str);
 void Visit(const koopa_raw_slice_t &slice);
 void Visit(const koopa_raw_function_t &func);
 void Visit(const koopa_raw_basic_block_t &bb);
 void Visit(const koopa_raw_value_t &value);
+void Visit(const koopa_raw_return_t &ret);
+void Visit(const koopa_raw_integer_t &ret);
 int main(int argc, const char *argv[]) {
   // 这段代码没看懂，记得搜
   // TODO()!!!
@@ -100,7 +104,7 @@ int main(int argc, const char *argv[]) {
   if (ofsForResult.is_open()) {
     streambuf *cout_buf = cout.rdbuf();
     cout.rdbuf(ofsForResult.rdbuf());
-    parse_AST(buffers);
+    parse_AST_New(buffers);
     cout << endl;
 
     cout.rdbuf(cout_buf);
@@ -113,42 +117,20 @@ int main(int argc, const char *argv[]) {
   return 0;
 }
 
-void parse_AST(const char *str) {
-  // 解析字符串 str, 得到 Koopa IR 程序
+void parse_AST_New(char *str) {
   koopa_program_t program;
   koopa_error_code_t ret = koopa_parse_from_string(str, &program);
-  assert(ret == KOOPA_EC_SUCCESS); // 确保解析时没有出错
-  // 创建一个 raw program builder, 用来构建 raw program
+  assert(ret == KOOPA_EC_SUCCESS);
   koopa_raw_program_builder_t builder = koopa_new_raw_program_builder();
-  // 将 Koopa IR 程序转换为 raw program
+
   koopa_raw_program_t raw = koopa_build_raw_program(builder, program);
+  // 访问所有全局变量
+  cout << "  .value\n";
+  Visit(raw.values);
+  // 访问所有函数
+  cout << "  .text\n";
+  Visit(raw.funcs);
 
-  std::cout << "  .text\n";
-
-  for (size_t i = 0; i < raw.funcs.len; ++i) {
-    // 正常情况下, 列表中的元素就是函数, 我们只不过是在确认这个事实
-    // 当然, 你也可以基于 raw slice 的 kind, 实现一个通用的处理函数
-    assert(raw.funcs.kind == KOOPA_RSIK_FUNCTION);
-    // 获取当前函数
-    koopa_raw_function_t func = (koopa_raw_function_t)raw.funcs.buffer[i];
-
-    cout << "  .globl " << func->name + 1 << endl;
-    cout << func->name + 1 << ":" << endl;
-    for (size_t j = 0; j < func->bbs.len; ++j) {
-      // 说明 func->bbs是一个basic_block
-      assert(func->bbs.kind == KOOPA_RSIK_BASIC_BLOCK);
-      koopa_raw_basic_block_t bb = (koopa_raw_basic_block_t)func->bbs.buffer[j];
-      for (size_t k = 0; k < bb->insts.len; k++) {
-        koopa_raw_value_t value = (koopa_raw_value_t)bb->insts.buffer[k];
-        assert(value->kind.tag == KOOPA_RVT_RETURN);
-        koopa_raw_value_t ret_value = value->kind.data.ret.value;
-        int32_t int_val = ret_value->kind.data.integer.value;
-        // assert(int_val == 0);
-        std::cout << "  li a0, " << int_val << std::endl;
-        std::cout << "  ret";
-      }
-    }
-  }
   // 释放 Koopa IR 程序占用的内存
   koopa_delete_program(program);
 
@@ -159,19 +141,6 @@ void parse_AST(const char *str) {
   // 注意, raw program 中所有的指针指向的内存均为 raw program builder 的内存
   // 所以不要在 raw program 处理完毕之前释放 builder
   koopa_delete_raw_program_builder(builder);
-}
-
-void parse_AST_New(char *str) {
-  koopa_program_t program;
-  koopa_error_code_t ret = koopa_parse_from_string(str, &program);
-  assert(ret == KOOPA_EC_SUCCESS);
-  koopa_raw_program_builder_t builder = koopa_new_raw_program_builder();
-
-  koopa_raw_program_t raw = koopa_build_raw_program(builder, program);
-  // 访问所有全局变量
-  Visit(raw.values);
-  // 访问所有函数
-  Visit(raw.funcs);
 }
 
 // 访问 raw slice
@@ -201,16 +170,19 @@ void Visit(const koopa_raw_slice_t &slice) {
 
 // 访问函数
 void Visit(const koopa_raw_function_t &func) {
+  // 传入的是 funcs中的一个func
   // 执行一些其他的必要操作
-  // ...
+  cout << "  .global " << func->name + 1 << endl;
+  cout << func->name + 1 << ":" << endl;
   // 访问所有基本块
   Visit(func->bbs);
 }
 
 // 访问基本块
 void Visit(const koopa_raw_basic_block_t &bb) {
+  // 传入的是bbs中的一个bb
   // 执行一些其他的必要操作
-  // ...
+
   // 访问所有指令
   Visit(bb->insts);
 }
@@ -234,6 +206,18 @@ void Visit(const koopa_raw_value_t &value) {
   }
 }
 
+void Visit(const koopa_raw_return_t &ret) {
+  koopa_raw_value_t ret_value = ret.value;
+  int32_t int_val = ret_value->kind.data.integer.value;
+  std::cout << "  li a0, " << int_val << endl;
+  cout << "  ret\n";
+}
+
+void Visit(const koopa_raw_integer_t &interger) {
+  int32_t int_val;
+  int_val = interger.value;
+  cout << " " << int_val;
+}
 // 访问对应类型指令的函数定义略
 // 视需求自行实现
 // ...
