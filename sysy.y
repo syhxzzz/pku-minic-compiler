@@ -43,10 +43,12 @@ class BaseAST;
 %token INT RETURN
 %token <str_val> IDENT
 %token <int_val> INT_CONST
+%token <char_val> OPERATOR
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp
 %type <int_val> Number
+%type <char_val> UnaryOp
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -102,11 +104,48 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
+  : RETURN Exp ';' {
     auto ast = new StmtAST();
     // ast->return_str=*unique_ptr<string>(*$1);
-    ast->number = $2;
+    ast->Exp = unique_ptr<BaseAST>($2);
      $$ = ast;
+  }
+  ;
+
+Exp
+  : UnaryExp{
+    auto ast = new ExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($1);
+    $$ = ast; 
+  }
+
+PrimaryExp  
+  : '(' Exp ')' {
+    auto ast = new PrimaryExp();
+    ast->p_exp = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }| Number{
+    auto ast = new PrimaryExp();
+    ast->p_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+UnaryExp
+  :PrimaryExp{
+    auto ast = new UnaryExp();
+    ast->unaryExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }| UnaryOp UnaryExp{
+    auto ast = new UnaryExp();
+    ast->unaryExp = unique_ptr<BaseAST>($2);
+    ast->unaryOp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+UnaryOp
+  :OPERATOR{
+    $$ = char($1);
   }
   ;
 
@@ -117,6 +156,7 @@ Number
     $$ =int($1);
   }
   ;
+
 
 %%
 

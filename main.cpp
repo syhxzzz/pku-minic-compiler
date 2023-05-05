@@ -28,8 +28,6 @@ void Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_return_t &ret);
 void Visit(const koopa_raw_integer_t &ret);
 int main(int argc, const char *argv[]) {
-  // 这段代码没看懂，记得搜
-  // TODO()!!!
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
   cout.tie(nullptr);

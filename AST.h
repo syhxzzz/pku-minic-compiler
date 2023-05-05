@@ -2,10 +2,14 @@
 // Created by syhxzzz on 23-5-1.
 //
 #pragma once
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
+
 // 所有 AST 的基类
+using namespace std;
+static int numCount = 0;
 class BaseAST {
 public:
   virtual ~BaseAST() = default;
@@ -54,8 +58,10 @@ public:
 class StmtAST : public BaseAST {
 public:
   int number;
-
+  unique_ptr<BaseAST> Exp;
+  // TODO：修改Stmt的结构以满足sysy.y的需要
   void Dump() const override {
+    Exp->Dump();
     std::cout << "  ret " << number;
     std::cout << "\n";
   }
@@ -71,4 +77,46 @@ public:
   int number;
 
   void Dump() const override { std::cout << number; }
+};
+class PrimaryExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> p_exp; // 指向具体的primaryExp
+
+  void Dump() const override { p_exp->Dump(); }
+};
+
+class UnaryopAST : public BaseAST {
+public:
+  char op;
+  void Dump() const override { cout << op; }
+};
+
+class ExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> unaryExp;
+  void Dump() const override { unaryExp->Dump(); }
+};
+
+class UnaryExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> unaryExp;
+  unique_ptr<BaseAST> unaryOp = nullptr;
+
+  void Dump() const override {
+    if (unaryOp) {
+      // 此时所指向的是 UnaryExp，需要递归处理
+      unaryOp->Dump();
+      string name;
+      if (numCount) {
+        cout << '%' << numCount << "= "
+             << "sub 0," << '%' << numCount - 1 << endl;
+      } else {
+        string oper;
+        switch (reinterpret_cast<UnaryopAST *>(unaryOp)->op) {}
+      }
+    } else {
+      // 此时 unaryExp所指向的是一个PrimaryExp
+      unaryExp->Dump();
+    }
+  }
 };
