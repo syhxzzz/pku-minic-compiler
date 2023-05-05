@@ -91,8 +91,19 @@ int main(int argc, const char *argv[]) {
   } else {
     cout << "Failed to open file:" << output << endl;
   }
-  freopen(output, "w", stdout);
-  parse_AST(buffers);
+
+  ofstream ofsForResult(outputString);
+  if (ofsForResult.is_open()) {
+    streambuf *cout_buf = cout.rdbuf();
+    cout.rdbuf(ofsForResult.rdbuf());
+    parse_AST(buffers);
+    cout << endl;
+
+    cout.rdbuf(cout_buf);
+    ofsForResult.close();
+  } else {
+    cerr << "Error: Failed to open file " << outputString << endl;
+  }
   delete[] buffers;
 
   return 0;
@@ -118,7 +129,7 @@ void parse_AST(const char *str) {
     koopa_raw_function_t func = (koopa_raw_function_t)raw.funcs.buffer[i];
 
     cout << "  .globl " << func->name + 1 << endl;
-    cout << func->name + 1 << endl;
+    cout << func->name + 1 << ":" << endl;
     for (size_t j = 0; j < func->bbs.len; ++j) {
       // 说明 func->bbs是一个basic_block
       assert(func->bbs.kind == KOOPA_RSIK_BASIC_BLOCK);
@@ -129,7 +140,7 @@ void parse_AST(const char *str) {
         koopa_raw_value_t ret_value = value->kind.data.ret.value;
         int32_t int_val = ret_value->kind.data.integer.value;
         // assert(int_val == 0);
-        std::cout << "  li a0," << int_val << std::endl;
+        std::cout << "  li a0, " << int_val << std::endl;
         std::cout << "  ret";
       }
     }
