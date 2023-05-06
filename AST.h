@@ -71,7 +71,7 @@ public:
 
   void Dump() const override { std::cout << "i32"; }
 };
-class NumberAST : public BaseAST {
+class NumberExpAST : public BaseAST {
 public:
   int number;
 
@@ -80,6 +80,7 @@ public:
     numCount++;
   }
 };
+
 class PrimaryExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> p_exp; // 指向具体的primaryExp
@@ -121,8 +122,8 @@ public:
         oper = "eq";
       }
       if (numCount) {
-        cout << '%' << numCount << " = " << oper << " 0," << '%' << numCount - 1
-             << endl;
+        cout << "  " << '%' << numCount << " = " << oper << " 0, " << '%'
+             << numCount - 1 << endl;
         numCount++;
       } else {
         cout << "%0 = " << oper << " 0, ";
@@ -135,3 +136,6 @@ public:
     }
   }
 };
+// class SinAST : public BaseAST {
+// public:
+// }

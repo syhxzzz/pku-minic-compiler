@@ -207,6 +207,7 @@ void Visit(const koopa_raw_value_t &value) {
 void Visit(const koopa_raw_return_t &ret) {
   koopa_raw_value_t ret_value = ret.value;
   int32_t int_val = ret_value->kind.data.integer.value;
+  // TODO: 重写！！！
   std::cout << "  li a0, " << int_val << endl;
   cout << "  ret\n";
 }
