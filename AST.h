@@ -10,6 +10,7 @@
 // 所有 AST 的基类
 using namespace std;
 static int numCount = 0;
+static int returnValue;
 class BaseAST {
 public:
   virtual ~BaseAST() = default;
@@ -57,12 +58,10 @@ public:
 };
 class StmtAST : public BaseAST {
 public:
-  int number;
   unique_ptr<BaseAST> Exp;
-  // TODO：修改Stmt的结构以满足sysy.y的需要
   void Dump() const override {
     Exp->Dump();
-    std::cout << "  ret " << number;
+    std::cout << "  ret %" << numCount - 1;
     std::cout << "\n";
   }
 };
@@ -76,7 +75,10 @@ class NumberAST : public BaseAST {
 public:
   int number;
 
-  void Dump() const override { std::cout << number; }
+  void Dump() const override {
+    cout << "  %" << numCount << " = add 0, " << number << endl;
+    numCount++;
+  }
 };
 class PrimaryExpAST : public BaseAST {
 public:
@@ -85,11 +87,11 @@ public:
   void Dump() const override { p_exp->Dump(); }
 };
 
-class UnaryopAST : public BaseAST {
-public:
-  char op;
-  void Dump() const override { cout << op; }
-};
+// class UnaryopAST : public BaseAST {
+// public:
+//   char op;
+//   void Dump() const override { cout << op; }
+// };
 
 class ExpAST : public BaseAST {
 public:
@@ -100,19 +102,32 @@ public:
 class UnaryExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> unaryExp;
-  unique_ptr<BaseAST> unaryOp = nullptr;
+  char unaryOp = '\0';
 
   void Dump() const override {
     if (unaryOp) {
       // 此时所指向的是 UnaryExp，需要递归处理
-      unaryOp->Dump();
+      unaryExp->Dump();
       string name;
+      string oper;
+      switch (unaryOp) {
+      case '+':
+        oper = "add";
+        break;
+      case '-':
+        oper = "sub";
+        break;
+      case '!':
+        oper = "eq";
+      }
       if (numCount) {
-        cout << '%' << numCount << "= "
-             << "sub 0," << '%' << numCount - 1 << endl;
+        cout << '%' << numCount << " = " << oper << " 0," << '%' << numCount - 1
+             << endl;
+        numCount++;
       } else {
-        string oper;
-        switch (reinterpret_cast<UnaryopAST *>(unaryOp)->op) {}
+        cout << "%0 = " << oper << " 0, ";
+        unaryExp->Dump();
+        cout << endl;
       }
     } else {
       // 此时 unaryExp所指向的是一个PrimaryExp

@@ -46,9 +46,9 @@ class BaseAST;
 %token <char_val> OPERATOR
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp
+%type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp NumberExp
 %type <int_val> Number
-%type <char_val> UnaryOp
+/* %type <char_val> UnaryOp */
 %%
 
 // 开始符, CompUnit ::= FuncDef, 大括号后声明了解析完成后 parser 要做的事情
@@ -121,11 +121,11 @@ Exp
 
 PrimaryExp  
   : '(' Exp ')' {
-    auto ast = new PrimaryExp();
+    auto ast = new PrimaryExpAST();
     ast->p_exp = unique_ptr<BaseAST>($2);
     $$ = ast;
-  }| Number{
-    auto ast = new PrimaryExp();
+  }| NumberExp{
+    auto ast = new PrimaryExpAST();
     ast->p_exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
@@ -133,21 +133,28 @@ PrimaryExp
 
 UnaryExp
   :PrimaryExp{
-    auto ast = new UnaryExp();
+    auto ast = new UnaryExpAST();
     ast->unaryExp = unique_ptr<BaseAST>($1);
     $$ = ast;
-  }| UnaryOp UnaryExp{
-    auto ast = new UnaryExp();
+  }| OPERATOR UnaryExp{
+    auto ast = new UnaryExpAST();
     ast->unaryExp = unique_ptr<BaseAST>($2);
-    ast->unaryOp = unique_ptr<BaseAST>($1);
+    ast->unaryOp = $1;
     $$ = ast;
   };
 
-UnaryOp
+/* UnaryOp
   :OPERATOR{
     $$ = char($1);
   }
-  ;
+  ; */
+
+NumberExp
+  : Number{
+    auto ast = new NumberAST();
+    ast->number = $1;
+    $$ = ast;
+  }
 
 Number
   : INT_CONST {
