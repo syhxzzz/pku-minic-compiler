@@ -76,8 +76,9 @@ public:
   int number;
 
   void Dump() const override {
-    cout << "  %" << numCount << " = add 0, " << number << endl;
-    numCount++;
+    if (numCount) {
+      cout << number << endl;
+    }
   }
 };
 
@@ -120,15 +121,20 @@ public:
         break;
       case '!':
         oper = "eq";
+        break;
       }
       if (numCount) {
-        cout << "  " << '%' << numCount << " = " << oper << " 0, " << '%'
-             << numCount - 1 << endl;
-        numCount++;
+        if (unaryOp != '+') {
+          cout << "  " << '%' << numCount << " = " << oper << " 0, " << '%'
+               << numCount - 1 << endl;
+          numCount++;
+        }
       } else {
-        cout << "%0 = " << oper << " 0, ";
-        unaryExp->Dump();
-        cout << endl;
+        if (unaryOp != '+') {
+          numCount++;
+          cout << "  %0 = " << oper << " 0, ";
+          unaryExp->Dump();
+        }
       }
     } else {
       // 此时 unaryExp所指向的是一个PrimaryExp

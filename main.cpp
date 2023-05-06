@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <iterator>
@@ -20,13 +21,14 @@ using namespace std;
 // 看起来会很烦人, 于是干脆采用这种看起来 dirty 但实际很有效的手段
 extern FILE *yyin;
 extern int yyparse(unique_ptr<BaseAST> &ast);
-void parse_AST_New(char *str);
+void parseAST(char *str);
 void Visit(const koopa_raw_slice_t &slice);
 void Visit(const koopa_raw_function_t &func);
 void Visit(const koopa_raw_basic_block_t &bb);
 void Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_return_t &ret);
 void Visit(const koopa_raw_integer_t &ret);
+void Visit(const koopa_raw_binary_t &binary);
 int main(int argc, const char *argv[]) {
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
@@ -102,7 +104,7 @@ int main(int argc, const char *argv[]) {
   if (ofsForResult.is_open()) {
     streambuf *cout_buf = cout.rdbuf();
     cout.rdbuf(ofsForResult.rdbuf());
-    parse_AST_New(buffers);
+    parseAST(buffers);
     cout << endl;
 
     cout.rdbuf(cout_buf);
@@ -115,7 +117,7 @@ int main(int argc, const char *argv[]) {
   return 0;
 }
 
-void parse_AST_New(char *str) {
+void parseAST(char *str) {
   koopa_program_t program;
   koopa_error_code_t ret = koopa_parse_from_string(str, &program);
   assert(ret == KOOPA_EC_SUCCESS);
@@ -198,8 +200,13 @@ void Visit(const koopa_raw_value_t &value) {
     // 访问 integer 指令
     Visit(kind.data.integer);
     break;
+  case KOOPA_RVT_BINARY:
+    // Visit(kind.data.binary);
+    break;
   default:
     // 其他类型暂时遇不到
+    cout << kind.tag << endl;
+    exit(0);
     assert(false);
   }
 }
@@ -210,6 +217,18 @@ void Visit(const koopa_raw_return_t &ret) {
   // TODO: 重写！！！
   std::cout << "  li a0, " << int_val << endl;
   cout << "  ret\n";
+}
+
+void solve_binary(const koopa_raw_binary_t &binary) {
+  koopa_raw_value_t l = binary.lhs;
+  koopa_raw_value_t r = binary.rhs;
+  int lreg, rreg;
+  if (binary.op == 6) { // 加法
+    cout << "    li t0"
+         << ", " << r->kind.data.integer.value << endl;
+  } else if (binary.op == 13) {
+    //
+  }
 }
 
 void Visit(const koopa_raw_integer_t &interger) {
