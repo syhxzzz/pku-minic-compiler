@@ -12,6 +12,7 @@
 #include <sstream>
 #include <stdio.h>
 #include <string>
+#include <sys/types.h>
 using namespace std;
 
 // 声明 lexer 的输入, 以及 parser 函数
@@ -29,6 +30,10 @@ void Visit(const koopa_raw_value_t &value);
 void Visit(const koopa_raw_return_t &ret);
 void Visit(const koopa_raw_integer_t &ret);
 void Visit(const koopa_raw_binary_t &binary);
+string registerName[15] = {"t0", "t1", "t2", "t3", "t4", "t5", "t6", "a0",
+                           "a1", "a2", "a3", "a4", "a5", "a6", "a7"};
+bool used[15] = {false};
+int countRegister = 0;
 int main(int argc, const char *argv[]) {
   ios::sync_with_stdio(false);
   cin.tie(nullptr);
@@ -222,12 +227,30 @@ void Visit(const koopa_raw_return_t &ret) {
 void solve_binary(const koopa_raw_binary_t &binary) {
   koopa_raw_value_t l = binary.lhs;
   koopa_raw_value_t r = binary.rhs;
-  int lreg, rreg;
+  int lreg = l->kind.data.integer.value;
+  int rreg = r->kind.data.integer.value;
+  string lRegStr, rRegStr;
   if (binary.op == 6) { // 加法
+                        // TODO: 没写完
     cout << "    li t0"
          << ", " << r->kind.data.integer.value << endl;
-  } else if (binary.op == 13) {
-    //
+  } else if (binary.op == 0) {
+    lRegStr = registerName[countRegister++];
+    rRegStr = registerName[countRegister++];
+    if (rreg == 0) {
+      rRegStr = "x0";
+      countRegister--;
+    }
+    cout << "  li   " << lRegStr << ", " << lreg << endl;
+    if (rreg != 0) {
+      cout << "  li   " << rRegStr << ", " << rreg << endl;
+    }
+    cout << "  xor    " << lRegStr << ", " << lRegStr << ", " << rRegStr
+         << endl;
+    cout << "  seqz  " << lRegStr << ", " << lRegStr << endl;
+  } else if (binary.op == 7) { // 减法
+    lRegStr = registerName[countRegister++];
+    rRegStr = registerName[countRegister++];
   }
 }
 

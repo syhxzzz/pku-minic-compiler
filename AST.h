@@ -76,9 +76,8 @@ public:
   int number;
 
   void Dump() const override {
-    if (numCount) {
-      cout << number << endl;
-    }
+    cout << "  %" << numCount << " = add 0, " << number << endl;
+    numCount++;
   }
 };
 
@@ -89,16 +88,74 @@ public:
   void Dump() const override { p_exp->Dump(); }
 };
 
-// class UnaryopAST : public BaseAST {
-// public:
-//   char op;
-//   void Dump() const override { cout << op; }
-// };
-
 class ExpAST : public BaseAST {
 public:
+  unique_ptr<BaseAST> addExp;
+  void Dump() const override { addExp->Dump(); }
+};
+
+class AddExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> mulExp;
+  unique_ptr<BaseAST> addExp = nullptr;
+  char oper = '\0';
+  void Dump() const override {
+    mulExp->Dump();
+    if (addExp) {
+      string operStr;
+      switch (oper) {
+      case '+':
+        operStr = "add";
+        break;
+      case '-':
+        operStr = "sub";
+        break;
+      default:
+        assert(false);
+      }
+      addExp->Dump();
+      cout << "  " << '%' << numCount << " = " << operStr << " %"
+           << numCount - 1 << ", " << '%' << numCount - 2 << endl;
+      numCount++;
+    }
+  }
+};
+
+class MulExpAST : public BaseAST {
+public:
   unique_ptr<BaseAST> unaryExp;
-  void Dump() const override { unaryExp->Dump(); }
+  unique_ptr<BaseAST> mulExp = nullptr;
+  char oper = '\0';
+  int left, right;
+  void Dump() const override {
+    unaryExp->Dump();
+    if (mulExp) {
+      string operStr;
+      switch (oper) {
+      case '*':
+        operStr = "mul";
+        break;
+      case '/':
+        operStr = "div";
+        break;
+      case '%':
+        operStr = "mod";
+        break;
+      default:
+        assert(false);
+      }
+      mulExp->Dump();
+      if (numCount) {
+        cout << "  %" << numCount + 1 << " = " << operStr << " %" << numCount
+             << ", %" << numCount - 1 << endl;
+        numCount++;
+      } else {
+        // 此时要创造第0个元素
+        // cout << "  %0 = " << operStr<<;
+      }
+      numCount++;
+    }
+  }
 };
 
 class UnaryExpAST : public BaseAST {
@@ -130,11 +187,11 @@ public:
           numCount++;
         }
       } else {
-        if (unaryOp != '+') {
-          numCount++;
-          cout << "  %0 = " << oper << " 0, ";
-          unaryExp->Dump();
-        }
+        // if (unaryOp != '+') {
+        numCount++;
+        cout << "  %0 = " << oper << " 0, ";
+        unaryExp->Dump();
+        // }
       }
     } else {
       // 此时 unaryExp所指向的是一个PrimaryExp

@@ -47,6 +47,7 @@ class BaseAST;
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp NumberExp
+%type <ast_val> AddExp MulExp
 %type <int_val> Number
 /* %type <char_val> UnaryOp */
 %%
@@ -113,11 +114,55 @@ Stmt
   ;
 
 Exp
-  : UnaryExp{
+  : AddExp{
     auto ast = new ExpAST();
-    ast->unaryExp = unique_ptr<BaseAST>($1);
+    ast->addExp = unique_ptr<BaseAST>($1);
     $$ = ast; 
+  };
+
+MulExp
+  :UnaryExp{
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|MulExp'*'UnaryExp{
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($3);
+    ast->oper = '*';
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|MulExp'/'UnaryExp{
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($3);
+    ast->oper = '/';
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|MulExp'%'UnaryExp{
+    auto ast = new MulExpAST();
+    ast->unaryExp = unique_ptr<BaseAST>($3);
+    ast->oper = '%';
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
   }
+
+AddExp
+  :AddExp'+'MulExp{
+    auto ast = new AddExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($3);
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->oper = '+';
+    $$ = ast;
+  }| AddExp'-'MulExp{
+    auto ast = new AddExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($3);
+    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->oper ='-';
+    $$ = ast;
+  }| MulExp{
+    auto ast = new AddExpAST();
+    ast->mulExp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
 
 PrimaryExp  
   : '(' Exp ')' {
