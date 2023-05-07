@@ -94,6 +94,70 @@ public:
   void Dump() const override { addExp->Dump(); }
 };
 
+class LOrExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> LAndExp;
+  unique_ptr<BaseAST> LOrExp = nullptr;
+  void Dump() const override {
+    LAndExp->Dump();
+    if (LOrExp) {
+      LOrExp->Dump();
+      cout << "  " << '%' << numCount << " = "
+           << "or"
+           << " %" << numCount - 1 << ", " << '%' << numCount - 2 << endl;
+      numCount++;
+    }
+  }
+};
+
+class LAndExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> EqExp;
+  unique_ptr<BaseAST> LAndExp = nullptr;
+  void Dump() const override {
+    EqExp->Dump();
+    if (LAndExp) {
+      LAndExp->Dump();
+      cout << "  " << '%' << numCount << " = "
+           << "and"
+           << " %" << numCount - 1 << ", " << '%' << numCount - 2 << endl;
+      numCount++;
+    }
+  }
+};
+
+class EqExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> RelExp;
+  unique_ptr<BaseAST> EqExp = nullptr;
+  string oper;
+  void Dump() const override {
+    RelExp->Dump();
+    if (EqExp) {
+      EqExp->Dump();
+      cout << "  " << '%' << numCount << " = " << oper << " %" << numCount - 1
+           << ", " << '%' << numCount - 2 << endl;
+      numCount++;
+    }
+  }
+};
+
+class RelExpAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> AddExp;
+  unique_ptr<BaseAST> RelExp = nullptr;
+  string oper;
+  void Dump() const override {
+    AddExp->Dump();
+    if (RelExp) {
+      RelExp->Dump();
+      cout << "  " << '%' << numCount << " = " << oper << " %" << numCount - 1
+           << ", " << '%' << numCount - 2 << endl;
+      numCount++;
+    }
+  }
+};
+
 class AddExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> mulExp;
@@ -146,9 +210,9 @@ public:
       }
       mulExp->Dump();
       if (numCount) {
-        cout << "  %" << numCount + 1 << " = " << operStr << " %" << numCount
-             << ", %" << numCount - 1 << endl;
-        numCount++;
+        cout << "  %" << numCount << " = " << operStr << " %" << numCount - 1
+             << ", %" << numCount - 2 << endl;
+        // numCount++;
       } else {
         // 此时要创造第0个元素
         // cout << "  %0 = " << operStr<<;
@@ -199,6 +263,3 @@ public:
     }
   }
 };
-// class SinAST : public BaseAST {
-// public:
-// }
