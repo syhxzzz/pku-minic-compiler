@@ -116,7 +116,7 @@ Stmt
 Exp
   : LOrExp{
     auto ast = new ExpAST();
-    ast->addExp = unique_ptr<BaseAST>($1);
+    ast->LOrExp = unique_ptr<BaseAST>($1);
     $$ = ast; 
   };
 
@@ -131,7 +131,8 @@ LOrExp
     ast->LAndExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   };
-
+//TODO:尝试在 有分支的地方的Dump()中增加 int返回值，用于表示其之前的numCount
+// 对应的AST有 LorExp,LAndExp,EqExp,RelExp,MulExp,UnaryExp
 LAndExp
   :EqExp{
     auto ast = new LAndExpAST();
@@ -171,13 +172,13 @@ RelExp
   }|RelExp '<' AddExp{
     auto ast = new RelExpAST();
     ast->RelExp = unique_ptr<BaseAST>($1);
-    ast->oper = "less";
+    ast->oper = "<";
     ast->AddExp = unique_ptr<BaseAST>($3); 
     $$ = ast;
   }|RelExp '>' AddExp{
     auto ast = new RelExpAST();
     ast->RelExp = unique_ptr<BaseAST>($1);
-    ast->oper = "greater";
+    ast->oper = ">";
     ast->AddExp = unique_ptr<BaseAST>($3); 
     $$ = ast;
   }|RelExp GEQ AddExp{

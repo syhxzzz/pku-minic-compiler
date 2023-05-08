@@ -90,8 +90,8 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-  unique_ptr<BaseAST> addExp;
-  void Dump() const override { addExp->Dump(); }
+  unique_ptr<BaseAST> LOrExp;
+  void Dump() const override { LOrExp->Dump(); }
 };
 
 class LOrExpAST : public BaseAST {
@@ -99,11 +99,13 @@ public:
   unique_ptr<BaseAST> LAndExp;
   unique_ptr<BaseAST> LOrExp = nullptr;
   void Dump() const override {
-    LAndExp->Dump();
     if (LOrExp) {
       LOrExp->Dump();
+    }
+    LAndExp->Dump();
+    if (LOrExp) {
       cout << "  " << '%' << numCount << " = "
-           << "or"
+           << "lor"
            << " %" << numCount - 1 << ", " << '%' << numCount - 2 << endl;
       numCount++;
     }
@@ -114,10 +116,13 @@ class LAndExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> EqExp;
   unique_ptr<BaseAST> LAndExp = nullptr;
+  int left;
   void Dump() const override {
-    EqExp->Dump();
     if (LAndExp) {
       LAndExp->Dump();
+    }
+    EqExp->Dump();
+    if (LAndExp) {
       cout << "  " << '%' << numCount << " = "
            << "and"
            << " %" << numCount - 1 << ", " << '%' << numCount - 2 << endl;
@@ -132,9 +137,11 @@ public:
   unique_ptr<BaseAST> EqExp = nullptr;
   string oper;
   void Dump() const override {
-    RelExp->Dump();
     if (EqExp) {
       EqExp->Dump();
+    }
+    RelExp->Dump();
+    if (EqExp) {
       cout << "  " << '%' << numCount << " = " << oper << " %" << numCount - 1
            << ", " << '%' << numCount - 2 << endl;
       numCount++;
@@ -148,9 +155,11 @@ public:
   unique_ptr<BaseAST> RelExp = nullptr;
   string oper;
   void Dump() const override {
-    AddExp->Dump();
     if (RelExp) {
       RelExp->Dump();
+    }
+    AddExp->Dump();
+    if (RelExp) {
       cout << "  " << '%' << numCount << " = " << oper << " %" << numCount - 1
            << ", " << '%' << numCount - 2 << endl;
       numCount++;
@@ -164,6 +173,9 @@ public:
   unique_ptr<BaseAST> addExp = nullptr;
   char oper = '\0';
   void Dump() const override {
+    if (addExp) {
+      addExp->Dump();
+    }
     mulExp->Dump();
     if (addExp) {
       string operStr;
@@ -177,7 +189,6 @@ public:
       default:
         assert(false);
       }
-      addExp->Dump();
       cout << "  " << '%' << numCount << " = " << operStr << " %"
            << numCount - 1 << ", " << '%' << numCount - 2 << endl;
       numCount++;
@@ -192,6 +203,9 @@ public:
   char oper = '\0';
   int left, right;
   void Dump() const override {
+    if (mulExp) {
+      mulExp->Dump();
+    }
     unaryExp->Dump();
     if (mulExp) {
       string operStr;
@@ -208,7 +222,6 @@ public:
       default:
         assert(false);
       }
-      mulExp->Dump();
       if (numCount) {
         cout << "  %" << numCount << " = " << operStr << " %" << numCount - 1
              << ", %" << numCount - 2 << endl;
@@ -225,7 +238,7 @@ public:
 class UnaryExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> unaryExp;
-  char unaryOp = '\0';
+  char unaryOp = 0;
 
   void Dump() const override {
     if (unaryOp) {
