@@ -40,14 +40,17 @@ class BaseAST;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NE LEQ GEQ
+%token INT RETURN LOR LAND EQ NE LEQ GEQ CONST
 %token <str_val> IDENT 
 %token <int_val> INT_CONST
 /* %token <char_val> OPERATOR  */
 
 // 非终结符的类型定义
 %type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp NumberExp
-%type <ast_val> AddExp MulExp LOrExp LAndExp EqExp RelExp
+%type <ast_val> AddExp MulExp LOrExp LAndExp EqExp RelExp BlockItem Decl ConstDecl
+%type <ast_val> BType SinConstDef ConstInitVal ConstExp VarDecl InitVal 
+%type <ast_val> SinBlockItem SinVarDef VarDefItem MulVarDef 
+%type <ast_val> MulBlockItem ConstDefItem MulConstDef LVal
 %type <int_val> Number
 /* %type <char_val> UnaryOp */
 %%
@@ -97,12 +100,158 @@ FuncType
 } */
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItem '}' {
     auto ast = new BlockAST();
     ast->stmt = unique_ptr<BaseAST>($2);
     $$ = ast;
+  }|'{' '}'{
+    auto ast = new BlockAST();
+    $$ = ast;
   }
   ;
+
+BlockItem
+  :MulBlockItem{
+    auto ast = new BlockItemAST();
+    ast->p_def = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|SinBlockItem{
+    auto ast = new BlockItemAST();
+    ast->p_def = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+SinBlockItem
+  :Decl{
+    auto ast = new BlockItemAST();
+    ast->p_def = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|Stmt{
+    auto ast = new BlockItemAST();
+    ast->p_def = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+MulBlockItem
+  :SinBlockItem BlockItem{
+    auto ast = new MulBlockItemAST();
+    ast->SinBlockItem = unique_ptr<BaseAST>($1);
+    ast->BlockItem= unique_ptr<BaseAST>($2);
+    $$ = ast;
+  };
+
+Decl
+  :ConstDecl{
+    auto ast = new DeclAST();
+    ast->decl_ast = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|VarDecl{
+    auto ast = new DeclAST();
+    ast->decl_ast = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+ConstDecl
+  :CONST BType ConstDefItem ';'{
+    auto ast = new ConstDeclAST();
+    ast->BType = unique_ptr<BaseAST>($2);
+    ast->ConstDef = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  };
+
+ConstDefItem
+  :MulConstDef{
+    auto ast = new ConstDefItemAST();
+    ast->ConstDef = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|SinConstDef{
+    auto ast = new ConstDefItemAST();
+    ast->ConstDef = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+MulConstDef
+  :SinConstDef ConstDefItem{
+    auto ast = new MulConstDefAST();
+    ast->SinConstDef = unique_ptr<BaseAST>($1);
+    ast->ConstDefItem = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+
+BType
+  :INT{
+    auto ast = new BTypeAST();
+    ast->type = "int";
+    $$ = ast;
+  };
+
+SinConstDef
+  :IDENT '=' ConstInitVal{
+    auto ast = new SinConstDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->ConstInitVal_ast = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  };
+
+ConstInitVal
+  :ConstExp{
+    auto ast = new SinConstDefAST();
+    ast->ConstInitVal_ast = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+ConstExp
+  :Exp{
+    auto ast = new ConstExpAST();
+    ast->exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+VarDecl
+  :BType ConstDefItem ';'{
+    auto ast = new VarDeclAST();
+    ast->BType = unique_ptr<BaseAST>($1);
+    ast->VarDef = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  };
+
+VarDefItem
+  :MulVarDef{
+    auto ast = new VarDefItemAST():
+    ast->ConstDef = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|SinVarDef{
+    auto ast = new VarDefItemAST():
+    ast->ConstDef = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
+
+MulVarDef
+  :SinVarDef VarDefItem{
+    auto ast = new MulVarDefAST();
+    ast->SinConstDef = unique_ptr<BaseAST>($1);
+    ast->ConstDefItem = unique_ptr<BaseAST>($2);
+    $$ = ast;
+  }
+
+SinVarDef
+  :IDENT '=' InitVal{
+    auto ast = new SinDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    ast->ConstInitVal_ast = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }|IDENT{
+    auto ast = new SinDefAST();
+    ast->ident = *unique_ptr<string>($1);
+    $$ = ast;
+  };
+
+InitVal
+  :Exp{
+    auto ast = new InitValAST();
+  }
 
 Stmt
   : RETURN Exp ';' {
@@ -110,6 +259,11 @@ Stmt
     // ast->return_str=*unique_ptr<string>(*$1);
     ast->Exp = unique_ptr<BaseAST>($2);
      $$ = ast;
+  }|LVal '=' Exp ';' {
+    auto ast = new StmtAST();
+    ast->LVal = unique_ptr<BaseAST>($1);
+    ast->Exp = unique_ptr<BaseAST>($3);
+    $$ = ast;
   }
   ;
 
@@ -131,8 +285,6 @@ LOrExp
     ast->LAndExp = unique_ptr<BaseAST>($3);
     $$ = ast;
   };
-//TODO:尝试在 有分支的地方的Dump()中增加 int返回值，用于表示其之前的numCount
-// 对应的AST有 LorExp,LAndExp,EqExp,RelExp,MulExp,UnaryExp
 LAndExp
   :EqExp{
     auto ast = new LAndExpAST();
@@ -239,6 +391,13 @@ AddExp
     $$ = ast;
   };
 
+LVal
+  :IDENT{
+    auto ast = new LValAST();
+    ast->ident = *unique_ptr<string>($1);
+    $$ = ast;
+  };
+
 PrimaryExp  
   : '(' Exp ')' {
     auto ast = new PrimaryExpAST();
@@ -248,6 +407,8 @@ PrimaryExp
     auto ast = new PrimaryExpAST();
     ast->p_exp = unique_ptr<BaseAST>($1);
     $$ = ast;
+  }| LVal{
+    //
   }
   ;
 
