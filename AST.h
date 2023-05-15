@@ -6,16 +6,19 @@
 #include <iostream>
 #include <memory>
 #include <string>
-
+#include <unordered_map>
 // 所有 AST 的基类
 using namespace std;
 static int numCount = 0;
 static int returnValue;
+static std::unordered_map<string, int> const_val;
+static std::unordered_map<string, int> var_type;
 class BaseAST {
 public:
   virtual ~BaseAST() = default;
 
   virtual void Dump() const = 0;
+  virtual int Calc() const = 0;
 };
 
 // CompUnit 是 BaseAST
@@ -29,6 +32,7 @@ public:
     func_def->Dump();
     // std::cout << " }";
   }
+  int Calc() const override { return 0; }
 };
 
 // FuncDef 也是 BaseAST
@@ -45,6 +49,7 @@ public:
     func_type->Dump();
     block->Dump();
   }
+  int Calc() const override { return 0; }
 };
 class BlockAST : public BaseAST {
 public:
@@ -55,6 +60,7 @@ public:
     stmt->Dump();
     std::cout << "}\n";
   }
+  int Calc() const override { return 0; }
 };
 
 class BlockItemAST : public BaseAST {
@@ -62,6 +68,7 @@ public:
   unique_ptr<BaseAST> p_def;
   // p_def指的可能是 SinBlockAST 或者 MulBlockAST
   void Dump() const override { p_def->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class MulBlockItemAST : public BaseAST {
@@ -72,6 +79,7 @@ public:
     SinBlockItem->Dump();
     BlockItem->Dump();
   }
+  int Calc() const override { return 0; }
 };
 
 class SinBlockItemAST : public BaseAST {
@@ -80,6 +88,7 @@ public:
   // p_def 可能是 Decl 或者 Stmt；
   // Stmt 是 Statment
   void Dump() const override { p_def->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class StmtAST : public BaseAST {
@@ -91,6 +100,7 @@ public:
     Exp->Dump();
     std::cout << "  ret %" << numCount - 1 << endl;
   }
+  int Calc() const override { return 0; }
 };
 
 class DeclAST : public BaseAST {
@@ -98,6 +108,7 @@ public:
   unique_ptr<BaseAST> decl_ast;
   // decl_ast可能是 ConstDecl 或者 VarDecl;
   void Dump() const override { decl_ast->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class ConstDeclAST : public BaseAST {
@@ -106,7 +117,9 @@ public:
   unique_ptr<BaseAST> ConstDef;
   void Dump() const override {
     // TODO:还没想好要怎么写
+    Calc();
   }
+  int Calc() const override { return 0; }
 };
 
 class ConstDefItemAST : public BaseAST {
@@ -114,6 +127,7 @@ public:
   unique_ptr<BaseAST> ConstDef;
   // ConstDef 可指向 MulConstDef 或者 SinConstDef
   void Dump() const override { ConstDef->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class MulConstDefAST : public BaseAST {
@@ -124,6 +138,7 @@ public:
     SinConstDef->Dump();
     ConstDefItem->Dump();
   }
+  int Calc() const override { return 0; }
 };
 
 class SinConstDefAST : public BaseAST {
@@ -133,6 +148,7 @@ public:
   void Dump() const override {
     // TODO:还没想好实现
   }
+  int Calc() const override { return 0; }
 };
 
 class BTypeAST : public BaseAST {
@@ -141,12 +157,15 @@ public:
   void Dump() const override {
     // TODO:还没想好实现
   }
+  int Calc() const override { return 0; }
 };
 
 class ConstExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> exp;
   void Dump() const override { exp->Dump(); }
+
+  int Calc() const override { return 0; }
 };
 
 class ConstInitValAST : public BaseAST {
@@ -155,6 +174,7 @@ public:
   void Dump() const override {
     // TODO:还没想好实现
   }
+  int Calc() const override { return 0; }
 };
 class VarDeclAST : public BaseAST {
 public:
@@ -163,6 +183,7 @@ public:
   void Dump() const override {
     // TODO:还没想好要怎么写
   }
+  int Calc() const override { return 0; }
 };
 
 class VarDefItemAST : public BaseAST {
@@ -170,6 +191,7 @@ public:
   unique_ptr<BaseAST> VarDef;
   // ConstDef 可指向 MulVarDef 或者 SinVarDef
   void Dump() const override { VarDef->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class MulVarDefAST : public BaseAST {
@@ -180,6 +202,7 @@ public:
     SinVarDef->Dump();
     VarDefItem->Dump();
   }
+  int Calc() const override { return 0; }
 };
 
 class SinVarDefAST : public BaseAST {
@@ -187,14 +210,22 @@ public:
   string ident;
   unique_ptr<BaseAST> VarInitVal_ast;
   void Dump() const override {
-    // TODO:还没想好实现
+    cout << "@" << ident << " = alloc i32" << std::endl;
+    var_type[ident] = 1;
+    const_val[ident] = 0;
+    if (VarInitVal_ast) {
+      cout << "store %" << numCount - 1 << ",@" << ident << endl;
+      const_val[ident] = VarInitVal_ast->Calc();
+    }
   }
+  int Calc() const override { return 0; }
 };
 
 class InitValAST : public BaseAST {
 public:
   unique_ptr<BaseAST> exp;
   void Dump() const override { exp->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class FuncTypeAST : public BaseAST {
@@ -202,6 +233,7 @@ public:
   std::string functype;
 
   void Dump() const override { std::cout << "i32"; }
+  int Calc() const override { return 0; }
 };
 class NumberExpAST : public BaseAST {
 public:
@@ -211,6 +243,7 @@ public:
     cout << "  %" << numCount << " = add 0, " << number << endl;
     numCount++;
   }
+  int Calc() const override { return number; }
 };
 
 class PrimaryExpAST : public BaseAST {
@@ -218,20 +251,24 @@ public:
   unique_ptr<BaseAST> p_exp; // 指向具体的primaryExp
 
   void Dump() const override { p_exp->Dump(); }
+  int Calc() const override { return 0; }
 };
 
 class LValAST : public BaseAST {
 public:
   string ident;
   void Dump() const override {
-    //
+    cout << "  %" << numCount << " = add 0, " << const_val[ident] << endl;
+    numCount++;
   }
+  int Calc() const override { return 0; }
 };
 
 class ExpAST : public BaseAST {
 public:
   unique_ptr<BaseAST> LOrExp;
   void Dump() const override { LOrExp->Dump(); }
+  int Calc() const override { return LOrExp->Calc(); }
 };
 
 class LOrExpAST : public BaseAST {
@@ -255,6 +292,12 @@ public:
            << numCount + 1 << endl;
       numCount += 5;
     }
+  }
+  int Calc() const override {
+    if (LOrExp) {
+      return LAndExp->Calc() || LOrExp->Calc();
+    }
+    return LAndExp->Calc();
   }
 };
 
@@ -280,6 +323,12 @@ public:
       numCount += 5;
     }
   }
+  int Calc() const override {
+    if (LAndExp) {
+      return LAndExp->Calc() && EqExp->Calc();
+    }
+    return EqExp->Calc();
+  }
 };
 
 class EqExpAST : public BaseAST {
@@ -301,6 +350,15 @@ public:
            << '%' << right << endl;
       numCount++;
     }
+  }
+  int Calc() const override {
+    if (EqExp) {
+      if (oper == "==") {
+        return RelExp->Calc() == EqExp->Calc();
+      }
+      return RelExp->Calc() != EqExp->Calc();
+    }
+    return RelExp->Calc();
   }
 };
 
@@ -334,6 +392,20 @@ public:
       }
     }
   }
+  int Calc() const override {
+    if (RelExp) {
+      if (oper == "ge") {
+        return RelExp->Calc() >= AddExp->Calc();
+      } else if (oper == "le") {
+        return RelExp->Calc() <= AddExp->Calc();
+      } else if (oper == "<") {
+        return RelExp->Calc() < AddExp->Calc();
+      } else { // oper==">"
+        return RelExp->Calc() > AddExp->Calc();
+      }
+    }
+    return AddExp->Calc();
+  }
 };
 
 class AddExpAST : public BaseAST {
@@ -365,6 +437,15 @@ public:
            << ", " << '%' << right << endl;
       numCount++;
     }
+  }
+  int Calc() const override {
+    if (addExp) {
+      if (oper == '+') {
+        return addExp->Calc() + mulExp->Calc();
+      }
+      return addExp->Calc() - mulExp->Calc();
+    }
+    return mulExp->Calc();
   }
 };
 
@@ -408,6 +489,15 @@ public:
       numCount++;
     }
   }
+  int Calc() const override {
+    if (mulExp) {
+      if (oper == '*') {
+        return mulExp->Calc() * unaryExp->Calc();
+      }
+      return mulExp->Calc() / unaryExp->Calc();
+    }
+    return unaryExp->Calc();
+  }
 };
 
 class UnaryExpAST : public BaseAST {
@@ -449,5 +539,16 @@ public:
       // 此时 unaryExp所指向的是一个PrimaryExp
       unaryExp->Dump();
     }
+  }
+  int Calc() const override {
+    if (unaryOp) {
+      if (unaryOp == '+') {
+        return unaryExp->Calc();
+      } else if (unaryOp == '-') {
+        return -unaryExp->Calc();
+      }
+      return !unaryExp->Calc();
+    }
+    return unaryExp->Calc();
   }
 };

@@ -210,7 +210,7 @@ ConstExp
   };
 
 VarDecl
-  :BType ConstDefItem ';'{
+  :BType VarDefItem ';'{
     auto ast = new VarDeclAST();
     ast->BType = unique_ptr<BaseAST>($1);
     ast->VarDef = unique_ptr<BaseAST>($2);
@@ -219,31 +219,31 @@ VarDecl
 
 VarDefItem
   :MulVarDef{
-    auto ast = new VarDefItemAST():
-    ast->ConstDef = unique_ptr<BaseAST>($1);
+    auto ast = new VarDefItemAST();
+    ast->VarDef = unique_ptr<BaseAST>($1);
     $$ = ast;
   }|SinVarDef{
-    auto ast = new VarDefItemAST():
-    ast->ConstDef = unique_ptr<BaseAST>($1);
+    auto ast = new VarDefItemAST();
+    ast->VarDef = unique_ptr<BaseAST>($1);
     $$ = ast;
   };
 
 MulVarDef
   :SinVarDef VarDefItem{
     auto ast = new MulVarDefAST();
-    ast->SinConstDef = unique_ptr<BaseAST>($1);
-    ast->ConstDefItem = unique_ptr<BaseAST>($2);
+    ast->SinVarDef = unique_ptr<BaseAST>($1);
+    ast->VarDefItem = unique_ptr<BaseAST>($2);
     $$ = ast;
   }
 
 SinVarDef
   :IDENT '=' InitVal{
-    auto ast = new SinDefAST();
+    auto ast = new SinVarDefAST();
     ast->ident = *unique_ptr<string>($1);
-    ast->ConstInitVal_ast = unique_ptr<BaseAST>($3);
+    ast->VarInitVal_ast = unique_ptr<BaseAST>($3);
     $$ = ast;
   }|IDENT{
-    auto ast = new SinDefAST();
+    auto ast = new SinVarDefAST();
     ast->ident = *unique_ptr<string>($1);
     $$ = ast;
   };
@@ -251,6 +251,7 @@ SinVarDef
 InitVal
   :Exp{
     auto ast = new InitValAST();
+    $$ = ast;
   }
 
 Stmt
@@ -258,7 +259,7 @@ Stmt
     auto ast = new StmtAST();
     // ast->return_str=*unique_ptr<string>(*$1);
     ast->Exp = unique_ptr<BaseAST>($2);
-     $$ = ast;
+    $$ = ast;
   }|LVal '=' Exp ';' {
     auto ast = new StmtAST();
     ast->LVal = unique_ptr<BaseAST>($1);
