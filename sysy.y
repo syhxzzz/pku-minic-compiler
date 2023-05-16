@@ -50,7 +50,7 @@ class BaseAST;
 %type <ast_val> AddExp MulExp LOrExp LAndExp EqExp RelExp BlockItem Decl ConstDecl
 %type <ast_val> BType SinConstDef ConstInitVal ConstExp VarDecl InitVal 
 %type <ast_val> SinBlockItem SinVarDef VarDefItem MulVarDef 
-%type <ast_val> MulBlockItem ConstDefItem MulConstDef LVal
+%type <ast_val> MulBlockItem ConstDefItem MulConstDef LVal LeVal
 %type <int_val> Number
 /* %type <char_val> UnaryOp */
 %%
@@ -251,6 +251,7 @@ SinVarDef
 InitVal
   :Exp{
     auto ast = new InitValAST();
+    ast->exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
 
@@ -260,9 +261,9 @@ Stmt
     // ast->return_str=*unique_ptr<string>(*$1);
     ast->Exp = unique_ptr<BaseAST>($2);
     $$ = ast;
-  }|LVal '=' Exp ';' {
+  }|LeVal '=' Exp ';' {
     auto ast = new StmtAST();
-    ast->LVal = unique_ptr<BaseAST>($1);
+    ast->LeVal = unique_ptr<BaseAST>($1);
     ast->Exp = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
@@ -399,6 +400,13 @@ LVal
     $$ = ast;
   };
 
+LeVal
+  :IDENT{
+    auto ast = new LeValAST();
+    ast->ident = *unique_ptr<string>($1);
+    $$ = ast;
+  };
+
 PrimaryExp  
   : '(' Exp ')' {
     auto ast = new PrimaryExpAST();
@@ -444,9 +452,15 @@ UnaryExp
 NumberExp
   : Number{
     auto ast = new NumberExpAST();
+    ast->type = 0;
     ast->number = $1;
     $$ = ast;
-  }
+  }|LVal{
+    auto ast = new NumberExpAST();
+    ast->type = 1;
+    ast->exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  };
 
 Number
   : INT_CONST {

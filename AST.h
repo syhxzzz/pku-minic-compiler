@@ -96,11 +96,17 @@ public:
 class StmtAST : public BaseAST {
 public:
   unique_ptr<BaseAST> Exp;
-  unique_ptr<BaseAST> LVal;
+  unique_ptr<BaseAST> LeVal;
   // TODO:
   void Dump() const override {
-    Exp->Dump();
-    std::cout << "  ret %" << numCount - 1 << endl;
+    if (LeVal == nullptr) {
+      Exp->Dump();
+      std::cout << "  ret %" << numCount - 1 << endl;
+    } else {
+      // 此时为 一个赋值的式子
+      Exp->Dump();
+      LeVal->Dump();
+    }
   }
   int Calc() const override { return 0; }
 };
@@ -118,7 +124,6 @@ public:
   unique_ptr<BaseAST> BType;
   unique_ptr<BaseAST> ConstDef;
   void Dump() const override {
-
     Calc();
     ConstDef->Dump();
   }
@@ -189,9 +194,7 @@ class VarDeclAST : public BaseAST {
 public:
   unique_ptr<BaseAST> BType;
   unique_ptr<BaseAST> VarDef;
-  void Dump() const override {
-    // TODO:还没想好要怎么写
-  }
+  void Dump() const override { VarDef->Dump(); }
   int Calc() const override { return 0; }
 };
 
@@ -210,6 +213,7 @@ public:
   void Dump() const override {
     SinVarDef->Dump();
     VarDefItem->Dump();
+    LookForProblem();
   }
   int Calc() const override { return 0; }
 };
@@ -219,11 +223,12 @@ public:
   string ident;
   unique_ptr<BaseAST> VarInitVal_ast;
   void Dump() const override {
-    cout << "@" << ident << " = alloc i32" << std::endl;
+    cout << "  @" << ident << " = alloc i32" << std::endl;
     var_type[ident] = 1;
     const_val[ident] = 0;
     if (VarInitVal_ast) {
-      cout << "store %" << numCount - 1 << ",@" << ident << endl;
+      VarInitVal_ast->Dump();
+      cout << "  store %" << numCount - 1 << ",@" << ident << endl;
       const_val[ident] = VarInitVal_ast->Calc();
     }
   }
@@ -247,10 +252,15 @@ public:
 class NumberExpAST : public BaseAST {
 public:
   int number;
-
+  int type; // type 为0代表这是一个数字，为1代表是一个变量
+  unique_ptr<BaseAST> exp;
   void Dump() const override {
-    cout << "  %" << numCount << " = add 0, " << number << endl;
-    numCount++;
+    if (type == 0) {
+      cout << "  %" << numCount << " = add 0, " << number << endl;
+      numCount++;
+    } else if (type == 1) {
+      exp->Dump();
+    }
   }
   int Calc() const override { return number; }
 };
@@ -267,8 +277,21 @@ class LValAST : public BaseAST {
 public:
   string ident;
   void Dump() const override {
-    cout << "  %" << numCount << " = add 0, " << const_val[ident] << endl;
+    if (var_type[ident] == 0) {
+      cout << "  %" << numCount << " = add 0, " << const_val[ident] << endl;
+    } else {
+      cout << "  %" << numCount << " = load @" << ident << endl;
+    }
     numCount++;
+  }
+  int Calc() const override { return 0; }
+};
+
+class LeValAST : public BaseAST {
+public:
+  string ident;
+  void Dump() const override {
+    cout << "  store %" << numCount - 1 << ", @" << ident << endl;
   }
   int Calc() const override { return 0; }
 };
