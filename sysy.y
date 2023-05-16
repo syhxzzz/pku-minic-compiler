@@ -197,8 +197,8 @@ SinConstDef
 
 ConstInitVal
   :ConstExp{
-    auto ast = new SinConstDefAST();
-    ast->ConstInitVal_ast = unique_ptr<BaseAST>($1);
+    auto ast = new ConstInitValAST();
+    ast->exp_ast = unique_ptr<BaseAST>($1);
     $$ = ast;
   };
 

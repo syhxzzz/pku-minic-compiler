@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <cassert>
+#include <cstdio>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -13,6 +14,7 @@ static int numCount = 0;
 static int returnValue;
 static std::unordered_map<string, int> const_val;
 static std::unordered_map<string, int> var_type;
+inline void LookForProblem() { cout << "Warning!!!\n"; }
 class BaseAST {
 public:
   virtual ~BaseAST() = default;
@@ -116,8 +118,9 @@ public:
   unique_ptr<BaseAST> BType;
   unique_ptr<BaseAST> ConstDef;
   void Dump() const override {
-    // TODO:还没想好要怎么写
+
     Calc();
+    ConstDef->Dump();
   }
   int Calc() const override { return 0; }
 };
@@ -146,7 +149,10 @@ public:
   string ident;
   unique_ptr<BaseAST> ConstInitVal_ast;
   void Dump() const override {
-    // TODO:还没想好实现
+    var_type[ident] = 1;
+    const_val[ident] = ConstInitVal_ast->Calc();
+    // cout << "const[" << ident << "] = " << const_val[ident] << endl;
+    // printf("const[%s] = %d\n", ident.c_str(), const_val[ident]);
   }
   int Calc() const override { return 0; }
 };
@@ -165,7 +171,7 @@ public:
   unique_ptr<BaseAST> exp;
   void Dump() const override { exp->Dump(); }
 
-  int Calc() const override { return 0; }
+  int Calc() const override { return exp->Calc(); }
 };
 
 class ConstInitValAST : public BaseAST {
@@ -174,7 +180,10 @@ public:
   void Dump() const override {
     // TODO:还没想好实现
   }
-  int Calc() const override { return 0; }
+  int Calc() const override {
+    // printf("ConstInitValAST's Calc() return %d\n", exp_ast->Calc());
+    return exp_ast->Calc();
+  }
 };
 class VarDeclAST : public BaseAST {
 public:
@@ -251,7 +260,7 @@ public:
   unique_ptr<BaseAST> p_exp; // 指向具体的primaryExp
 
   void Dump() const override { p_exp->Dump(); }
-  int Calc() const override { return 0; }
+  int Calc() const override { return p_exp->Calc(); }
 };
 
 class LValAST : public BaseAST {
@@ -433,6 +442,7 @@ public:
       default:
         assert(false);
       }
+      printf("Warning!\n");
       cout << "  " << '%' << numCount << " = " << operStr << " %" << left
            << ", " << '%' << right << endl;
       numCount++;
@@ -529,11 +539,10 @@ public:
           numCount++;
         }
       } else {
-        // if (unaryOp != '+') {
         numCount++;
-        cout << "  %0 = " << oper << " 0, ";
-        unaryExp->Dump();
-        // }
+        int num = unaryExp->Calc();
+        // printf("num = %d\n", num);
+        cout << "  %0 = " << oper << " 0, " << num;
       }
     } else {
       // 此时 unaryExp所指向的是一个PrimaryExp
