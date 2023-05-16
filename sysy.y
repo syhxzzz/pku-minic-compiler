@@ -173,10 +173,10 @@ ConstDefItem
   };
 
 MulConstDef
-  :SinConstDef ConstDefItem{
+  :SinConstDef ',' ConstDefItem{
     auto ast = new MulConstDefAST();
     ast->SinConstDef = unique_ptr<BaseAST>($1);
-    ast->ConstDefItem = unique_ptr<BaseAST>($2);
+    ast->ConstDefItem = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
 
@@ -229,10 +229,10 @@ VarDefItem
   };
 
 MulVarDef
-  :SinVarDef VarDefItem{
+  :SinVarDef ',' VarDefItem{
     auto ast = new MulVarDefAST();
     ast->SinVarDef = unique_ptr<BaseAST>($1);
-    ast->VarDefItem = unique_ptr<BaseAST>($2);
+    ast->VarDefItem = unique_ptr<BaseAST>($3);
     $$ = ast;
   }
 
@@ -417,7 +417,9 @@ PrimaryExp
     ast->p_exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   }| LVal{
-    //
+    auto ast = new PrimaryExpAST();
+    ast->p_exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
   }
   ;
 
@@ -454,11 +456,6 @@ NumberExp
     auto ast = new NumberExpAST();
     ast->type = 0;
     ast->number = $1;
-    $$ = ast;
-  }|LVal{
-    auto ast = new NumberExpAST();
-    ast->type = 1;
-    ast->exp = unique_ptr<BaseAST>($1);
     $$ = ast;
   };
 

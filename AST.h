@@ -14,6 +14,7 @@ static int numCount = 0;
 static int returnValue;
 static std::unordered_map<string, int> const_val;
 static std::unordered_map<string, int> var_type;
+// 确定一个变量的类型，是变量还是常量，变量为0,常量为1
 inline void LookForProblem() { cout << "Warning!!!\n"; }
 class BaseAST {
 public:
@@ -176,7 +177,10 @@ public:
   unique_ptr<BaseAST> exp;
   void Dump() const override { exp->Dump(); }
 
-  int Calc() const override { return exp->Calc(); }
+  int Calc() const override {
+    printf("ConstExpAST's Calc() return %d\n", exp->Calc());
+    return exp->Calc();
+  }
 };
 
 class ConstInitValAST : public BaseAST {
@@ -186,10 +190,11 @@ public:
     // TODO:还没想好实现
   }
   int Calc() const override {
-    // printf("ConstInitValAST's Calc() return %d\n", exp_ast->Calc());
+    printf("ConstInitValAST's Calc() return %d\n", exp_ast->Calc());
     return exp_ast->Calc();
   }
 };
+
 class VarDeclAST : public BaseAST {
 public:
   unique_ptr<BaseAST> BType;
@@ -213,7 +218,7 @@ public:
   void Dump() const override {
     SinVarDef->Dump();
     VarDefItem->Dump();
-    LookForProblem();
+    // LookForProblem();
   }
   int Calc() const override { return 0; }
 };
@@ -224,7 +229,7 @@ public:
   unique_ptr<BaseAST> VarInitVal_ast;
   void Dump() const override {
     cout << "  @" << ident << " = alloc i32" << std::endl;
-    var_type[ident] = 1;
+    var_type[ident] = 0;
     const_val[ident] = 0;
     if (VarInitVal_ast) {
       VarInitVal_ast->Dump();
@@ -262,7 +267,13 @@ public:
       exp->Dump();
     }
   }
-  int Calc() const override { return number; }
+  int Calc() const override {
+    if (type == 0) {
+      return number;
+    } else {
+      return exp->Calc();
+    }
+  }
 };
 
 class PrimaryExpAST : public BaseAST {
@@ -277,14 +288,14 @@ class LValAST : public BaseAST {
 public:
   string ident;
   void Dump() const override {
-    if (var_type[ident] == 0) {
+    if (var_type[ident] == 1) {
       cout << "  %" << numCount << " = add 0, " << const_val[ident] << endl;
     } else {
       cout << "  %" << numCount << " = load @" << ident << endl;
     }
     numCount++;
   }
-  int Calc() const override { return 0; }
+  int Calc() const override { return const_val[ident]; }
 };
 
 class LeValAST : public BaseAST {
@@ -465,7 +476,6 @@ public:
       default:
         assert(false);
       }
-      printf("Warning!\n");
       cout << "  " << '%' << numCount << " = " << operStr << " %" << left
            << ", " << '%' << right << endl;
       numCount++;
