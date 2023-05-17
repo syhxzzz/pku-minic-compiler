@@ -96,8 +96,6 @@ FuncType
     $$ = ast;
   }
   ;
-/* IDENT:IDENT{
-} */
 
 Block
   : '{' BlockItem '}' {
@@ -259,12 +257,28 @@ Stmt
   : RETURN Exp ';' {
     auto ast = new StmtAST();
     // ast->return_str=*unique_ptr<string>(*$1);
+    ast->ret = true;
     ast->Exp = unique_ptr<BaseAST>($2);
     $$ = ast;
   }|LeVal '=' Exp ';' {
     auto ast = new StmtAST();
     ast->LeVal = unique_ptr<BaseAST>($1);
     ast->Exp = unique_ptr<BaseAST>($3);
+    $$ = ast;
+  }|RETURN ';'{
+    auto ast = new StmtAST();
+    $$ = ast;
+    // TODO: 不知道这里应该 return 什么值
+  }|Block{
+    auto ast = new StmtAST();
+    ast->Exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|Exp ';'{
+    auto ast = new StmtAST();
+    ast->Exp = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|';'{
+    auto ast = new StmtAST();
     $$ = ast;
   }
   ;

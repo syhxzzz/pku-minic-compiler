@@ -12,6 +12,10 @@
 using namespace std;
 static int numCount = 0;
 static int returnValue;
+static int dep;
+static int f[256]; // 记录该节点的父节点
+static int nowDep;
+
 static std::unordered_map<string, int> const_val;
 static std::unordered_map<string, int> var_type;
 // 确定一个变量的类型，是变量还是常量，变量为0,常量为1
@@ -50,18 +54,24 @@ public:
     std::cout << "fun @";
     std::cout << ident << "():";
     func_type->Dump();
+    cout << "{\n%entry:\n";
     block->Dump();
+    cout << "}\n";
   }
   int Calc() const override { return 0; }
 };
+
 class BlockAST : public BaseAST {
 public:
-  std::unique_ptr<BaseAST> stmt;
-
+  unique_ptr<BaseAST> stmt;
   void Dump() const override {
-    std::cout << "{\n%entry:\n";
-    stmt->Dump();
-    std::cout << "}\n";
+    if (stmt) {
+      dep++;
+      f[dep] = nowDep;
+      nowDep = dep;
+      stmt->Dump();
+      nowDep = f[nowDep];
+    }
   }
   int Calc() const override { return 0; }
 };
@@ -98,11 +108,16 @@ class StmtAST : public BaseAST {
 public:
   unique_ptr<BaseAST> Exp;
   unique_ptr<BaseAST> LeVal;
+  bool ret = false;
   // TODO:
   void Dump() const override {
     if (LeVal == nullptr) {
-      Exp->Dump();
-      std::cout << "  ret %" << numCount - 1 << endl;
+      if (Exp) {
+        Exp->Dump();
+        if (ret) {
+          cout << "  ret %" << numCount - 1 << endl;
+        }
+      }
     } else {
       // 此时为 一个赋值的式子
       Exp->Dump();
@@ -155,8 +170,9 @@ public:
   string ident;
   unique_ptr<BaseAST> ConstInitVal_ast;
   void Dump() const override {
-    var_type[ident] = 1;
-    const_val[ident] = ConstInitVal_ast->Calc();
+    string newIdent = ident + "_" + to_string(nowDep);
+    var_type[newIdent] = 1;
+    const_val[newIdent] = ConstInitVal_ast->Calc();
     // cout << "const[" << ident << "] = " << const_val[ident] << endl;
     // printf("const[%s] = %d\n", ident.c_str(), const_val[ident]);
   }
@@ -228,13 +244,15 @@ public:
   string ident;
   unique_ptr<BaseAST> VarInitVal_ast;
   void Dump() const override {
-    cout << "  @" << ident << " = alloc i32" << std::endl;
-    var_type[ident] = 0;
-    const_val[ident] = 0;
+    string newIdent;
+    newIdent = ident + "_" + to_string(nowDep);
+    cout << "  @" << newIdent << " = alloc i32" << std::endl;
+    var_type[newIdent] = 0;
+    const_val[newIdent] = 0;
     if (VarInitVal_ast) {
       VarInitVal_ast->Dump();
-      cout << "  store %" << numCount - 1 << ",@" << ident << endl;
-      const_val[ident] = VarInitVal_ast->Calc();
+      cout << "  store %" << numCount - 1 << ",@" << newIdent << endl;
+      const_val[newIdent] = VarInitVal_ast->Calc();
     }
   }
   int Calc() const override { return 0; }
@@ -254,6 +272,7 @@ public:
   void Dump() const override { std::cout << "i32"; }
   int Calc() const override { return 0; }
 };
+
 class NumberExpAST : public BaseAST {
 public:
   int number;
@@ -288,21 +307,40 @@ class LValAST : public BaseAST {
 public:
   string ident;
   void Dump() const override {
-    if (var_type[ident] == 1) {
-      cout << "  %" << numCount << " = add 0, " << const_val[ident] << endl;
+    int tempDep = nowDep;
+    while (var_type.find(ident + "_" + to_string(tempDep)) == var_type.end()) {
+      tempDep = f[tempDep];
+    }
+    string newIdent;
+    newIdent = ident + "_" + to_string(tempDep);
+    if (var_type[newIdent] == 1) {
+      cout << "  %" << numCount << " = add 0, " << const_val[newIdent] << endl;
     } else {
-      cout << "  %" << numCount << " = load @" << ident << endl;
+      cout << "  %" << numCount << " = load @" << newIdent << endl;
     }
     numCount++;
   }
-  int Calc() const override { return const_val[ident]; }
+  int Calc() const override {
+    int tempDep = nowDep;
+    while (var_type.find(ident + "_" + to_string(tempDep)) == var_type.end()) {
+      tempDep = f[tempDep];
+    }
+    string newIdent;
+    newIdent = ident + "_" + to_string(tempDep);
+    return const_val[newIdent];
+  }
 };
 
-class LeValAST : public BaseAST {
+class LeValAST : public BaseAST { // 左值
 public:
   string ident;
   void Dump() const override {
-    cout << "  store %" << numCount - 1 << ", @" << ident << endl;
+    int tempDep = nowDep;
+    while (var_type.find(ident + "_" + to_string(tempDep)) == var_type.end()) {
+      tempDep = f[tempDep];
+    }
+    string newIdent = ident + "_" + to_string(tempDep);
+    cout << "  store %" << numCount - 1 << ", @" << newIdent << endl;
   }
   int Calc() const override { return 0; }
 };
