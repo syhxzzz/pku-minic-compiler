@@ -40,7 +40,7 @@ class BaseAST;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token INT RETURN LOR LAND EQ NE LEQ GEQ CONST
+%token INT RETURN LOR LAND EQ NE LEQ GEQ CONST IF ELSE
 %token <str_val> IDENT 
 %token <int_val> INT_CONST
 /* %token <char_val> OPERATOR  */
@@ -49,9 +49,9 @@ class BaseAST;
 %type <ast_val> FuncDef FuncType Block Stmt PrimaryExp UnaryExp Exp NumberExp
 %type <ast_val> AddExp MulExp LOrExp LAndExp EqExp RelExp BlockItem Decl ConstDecl
 %type <ast_val> BType SinConstDef ConstInitVal ConstExp VarDecl InitVal 
-%type <ast_val> SinBlockItem SinVarDef VarDefItem MulVarDef 
+%type <ast_val> SinBlockItem SinVarDef VarDefItem MulVarDef IfStmt SinIfStmt MulIfStmt
 %type <ast_val> MulBlockItem ConstDefItem MulConstDef LVal LeVal
-%type <int_val> Number
+%type <int_val> Number 
 /* %type <char_val> UnaryOp */
 %%
 
@@ -257,31 +257,71 @@ Stmt
   : RETURN Exp ';' {
     auto ast = new StmtAST();
     // ast->return_str=*unique_ptr<string>(*$1);
-    ast->ret = true;
     ast->Exp = unique_ptr<BaseAST>($2);
+    ast->type = 0;
     $$ = ast;
   }|LeVal '=' Exp ';' {
     auto ast = new StmtAST();
     ast->LeVal = unique_ptr<BaseAST>($1);
     ast->Exp = unique_ptr<BaseAST>($3);
+    ast->type = 1;
     $$ = ast;
   }|RETURN ';'{
     auto ast = new StmtAST();
+    ast->type = 2;
     $$ = ast;
-    // TODO: 不知道这里应该 return 什么值
   }|Block{
     auto ast = new StmtAST();
     ast->Exp = unique_ptr<BaseAST>($1);
+    ast->type = 3;
     $$ = ast;
   }|Exp ';'{
     auto ast = new StmtAST();
     ast->Exp = unique_ptr<BaseAST>($1);
+    ast->type = 4;
     $$ = ast;
   }|';'{
     auto ast = new StmtAST();
+    ast->type = 5;
+    $$ = ast;
+  }|IfStmt{
+    auto ast = new StmtAST();
+    ast->type = 6;
+    ast->ifStmt = unique_ptr<BaseAST>($1);
     $$ = ast;
   }
   ;
+
+IfStmt
+  :SinIfStmt{
+    auto ast = new IfStmtAST();
+    ast->ifStmt = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }|MulIfStmt{
+    auto ast = new IfStmtAST();
+    ast->ifStmt = unique_ptr<BaseAST>($1);
+    $$ = ast;
+  }
+  ;
+
+SinIfStmt
+:IF '(' Exp ')' Stmt{
+    auto ast = new SinIfStmtAST();
+    ast->Exp = unique_ptr<BaseAST>($3);
+    ast->ifStmt = unique_ptr<BaseAST>($5);
+    $$ = ast;
+  }
+  ;
+
+MulIfStmt
+:IF '(' Exp ')' Stmt ELSE Stmt{
+    auto ast = new MulIfStmtAST();
+    ast->Exp = unique_ptr<BaseAST>($3);
+    ast->ifStmt = unique_ptr<BaseAST>($5);
+    ast->elseStmt = unique_ptr<BaseAST>($7);
+    $$ = ast;
+  }
+
 
 Exp
   : LOrExp{

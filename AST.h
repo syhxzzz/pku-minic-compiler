@@ -14,6 +14,7 @@ static int numCount = 0;
 static int returnValue;
 static int dep;
 static int f[256]; // 记录该节点的父节点
+static bool used[256]; // 记录该节点是否已经输出结尾的命令，包括 br|ret|jump
 static int nowDep;
 
 static std::unordered_map<string, int> const_val;
@@ -108,21 +109,78 @@ class StmtAST : public BaseAST {
 public:
   unique_ptr<BaseAST> Exp;
   unique_ptr<BaseAST> LeVal;
-  bool ret = false;
-  // TODO:
+  unique_ptr<BaseAST> ifStmt;
+  int type;
   void Dump() const override {
-    if (LeVal == nullptr) {
-      if (Exp) {
-        Exp->Dump();
-        if (ret) {
-          cout << "  ret %" << numCount - 1 << endl;
-        }
-      }
-    } else {
-      // 此时为 一个赋值的式子
+    switch (type) {
+    case 0:
+      Exp->Dump();
+      cout << "  ret %" << numCount - 1 << endl;
+      break;
+    case 1:
       Exp->Dump();
       LeVal->Dump();
+      break;
+    case 2:
+      cout << "  ret %" << numCount - 1 << endl;
+      break;
+    case 3:
+    case 4:
+      Exp->Dump();
+      break;
+    case 5:
+      break;
+    case 6:
+      ifStmt->Dump();
+      break;
+    default:
+      assert(false);
     }
+  }
+  int Calc() const override { return 0; }
+};
+
+class IfStmtAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> ifStmt;
+  void Dump() const override { ifStmt->Dump(); }
+  int Calc() const override { return 0; }
+};
+
+class SinIfStmtAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> Exp;
+  unique_ptr<BaseAST> ifStmt;
+  void Dump() const override {
+    // TODO:未做完不充分！！！
+    Exp->Dump();
+    cout << "  br %" << numCount - 1 << ", %then, %else" << endl << endl;
+    cout << "%then:" << endl;
+    ifStmt->Dump();
+    cout << "  jump %end" << endl;
+    cout << endl << "%else:" << endl;
+    cout << "  jump %end" << endl;
+    cout << endl << "%end:" << endl;
+  }
+  int Calc() const override { return 0; }
+};
+
+class MulIfStmtAST : public BaseAST {
+public:
+  unique_ptr<BaseAST> Exp;
+  unique_ptr<BaseAST> ifStmt;
+  unique_ptr<BaseAST> elseStmt;
+  void Dump() const override {
+    // TODO:未做完不充分！！！
+    Exp->Dump();
+    cout << "  br %" << numCount - 1 << ", %then, %else" << endl << endl;
+    cout << "%then:" << endl;
+    ifStmt->Dump();
+    cout << "  jump %end" << endl;
+    cout << endl << "%else:" << endl;
+    elseStmt->Dump();
+    cout << "  jump %end" << endl;
+    cout << endl << "%end:" << endl;
   }
   int Calc() const override { return 0; }
 };
